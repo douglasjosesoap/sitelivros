@@ -2,17 +2,47 @@ const SUPABASE_URL = "https://xjbhlpravirbhmvoornj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqYmhscHJhdmlyYmhtdm9vcm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MDIxOTcsImV4cCI6MjA1NjM3ODE5N30.MJI87j7DNXymETt-wh_mpEEhW1LVtHC6G4-hsoaHa5w";
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Função para verificar se o usuário tem permissão de admin antes de acessar o painel
+// Função para validar login do admin
+async function loginAdmin() {
+    const email = document.getElementById("adminEmail").value;
+    const password = document.getElementById("adminPass").value;
+
+    let { data: user, error } = await supabase
+        .from("users")
+        .select("id, username, email, password, role")
+        .eq("email", email)
+        .single();
+
+    if (error || !user) {
+        alert("Usuário não encontrado!");
+        return;
+    }
+
+    if (user.password !== password) {
+        alert("Senha incorreta!");
+        return;
+    }
+
+    if (user.role !== "admin") {
+        alert("Acesso negado! Apenas administradores podem acessar.");
+        return;
+    }
+
+    localStorage.setItem("user", JSON.stringify(user));
+    alert("Login bem-sucedido! Redirecionando...");
+    window.location.href = "admin.html";
+}
+
+// Função para verificar se o usuário é admin ao acessar o painel
 async function verificarAdmin() {
     const user = JSON.parse(localStorage.getItem("user"));
 
     if (!user) {
         alert("Você precisa estar logado!");
-        window.location.href = "login.html";
+        window.location.href = "admin-login.html";
         return;
     }
 
-    // Verifica no Supabase se o usuário logado é admin
     let { data: adminUser, error } = await supabase
         .from("users")
         .select("role")
@@ -20,50 +50,10 @@ async function verificarAdmin() {
         .single();
 
     if (error || !adminUser || adminUser.role !== "admin") {
-        alert("Acesso negado! Apenas administradores podem entrar.");
-        window.location.href = "login.html";
+        alert("Acesso negado! Apenas administradores podem acessar.");
+        window.location.href = "admin-login.html";
     }
 }
 
-// Verifica a permissão de admin ao carregar a página
+// Verifica permissão ao carregar a página
 document.addEventListener("DOMContentLoaded", verificarAdmin);
-
-// Função para postar capítulos (somente administradores)
-async function postarCapitulo() {
-    const titulo = document.getElementById("titulo").value;
-    const conteudo = document.getElementById("conteudo").value;
-    const tipo = document.getElementById("tipo").value;
-
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    if (!user) {
-        alert("Você precisa estar logado!");
-        window.location.href = "login.html";
-        return;
-    }
-
-    // Verifica se o usuário ainda tem permissão de admin
-    let { data: adminUser, error } = await supabase
-        .from("users")
-        .select("role")
-        .eq("email", user.email)
-        .single();
-
-    if (error || !adminUser || adminUser.role !== "admin") {
-        alert("Apenas administradores podem postar!");
-        window.location.href = "login.html";
-        return;
-    }
-
-    // Enviar os dados para o Supabase
-    let { error: postError } = await supabase.from("chapters").insert([
-        { title: titulo, content: conteudo, tipo, status: "aprovado" }
-    ]);
-
-    if (postError) {
-        alert("Erro ao publicar: " + postError.message);
-    } else {
-        alert("Capítulo publicado com sucesso!");
-        window.location.reload();
-    }
-}
