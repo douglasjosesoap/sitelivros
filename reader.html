@@ -1,35 +1,38 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitor de Livros & Mangás</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <title>Leitor de Livros & Mangás</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header>
-        <h1>Leitor de Livros & Mangás</h1>
-        <nav>
-            <ul>
-                <li><a href="index.html">Início</a></li>
-                <li><a href="admin.html">Admin</a></li>
-                <li><a href="login.html" id="userLogin">Entrar</a></li>
-            </ul>
-        </nav>
-    </header>
+  <header>
+    <h1>Leitor de Livros & Mangás</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Início</a></li>
+        <li><a href="admin.html">Admin</a></li>
+        <li><a href="login.html" id="userLogin">Entrar</a></li>
+      </ul>
+    </nav>
+  </header>
 
-    <main id="leitor">
-        <div id="leitor-container">
-            <button id="anterior" onclick="paginaAnterior()">⬅ Anterior</button>
-            <img id="pagina-atual" src="" alt="Página do mangá">
-            <button id="proximo" onclick="proximaPagina()">Próximo ➡</button>
-        </div>
-    </main>
+  <main>
+    <h2>Ranking (mais curtidos)</h2>
+    <div id="ranking"></div>
 
-    <footer>
-        <p>&copy; 2025 - Leitor de Livros & Mangás</p>
-    </footer>
+    <h2>Exemplo de Leitor</h2>
+    <div id="leitor-container">
+      <button onclick="paginaAnterior()">⬅ Anterior</button>
+      <img id="pagina-atual" src="" alt="Página do mangá" />
+      <button onclick="proximaPagina()">Próximo ➡</button>
+    </div>
+  </main>
 
-    <script src="js/reader.js"></script>
+  <footer>
+    <p>&copy; 2025 - Leitor de Livros & Mangás</p>
+  </footer>
+
+  <script src="js/reader.js"></script>
 </body>
 </html>

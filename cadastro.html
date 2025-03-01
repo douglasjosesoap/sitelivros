@@ -2,25 +2,24 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="container">
     <h2>Cadastro</h2>
-    <input type="text" id="newUser" placeholder="Usuário ou Nome de Autor">
-    <input type="email" id="newEmail" placeholder="Email">
-    <input type="password" id="newPass" placeholder="Senha">
-
+    <input type="text" id="newUser" placeholder="Seu username">
+    <input type="email" id="newEmail" placeholder="Seu email">
+    <input type="password" id="newPass" placeholder="Sua senha (texto puro)">
+    
+    <label>Selecione o tipo de conta:</label>
     <select id="userRole">
       <option value="leitor">Leitor</option>
       <option value="autor">Autor</option>
     </select>
 
-    <!-- Upload de PDF só faz sentido se role=autor -->
-    <label for="prologoPDF">Prólogo (PDF):</label>
-    <input type="file" id="prologoPDF" accept="application/pdf" />
+    <p>Se for Autor, envie um PDF de prólogo:</p>
+    <input type="file" id="prologoPDF" accept="application/pdf">
 
     <button id="registerButton">Cadastrar</button>
     <p><a href="login.html">Já tem conta? Faça login</a></p>

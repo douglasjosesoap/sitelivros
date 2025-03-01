@@ -4,10 +4,10 @@ const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 document.addEventListener("DOMContentLoaded", async function () {
   const conteudo = document.getElementById("conteudo");
-  const ranking = document.getElementById("ranking");
+  const rankingDiv = document.getElementById("ranking");
 
   // 1) Carregar últimos capítulos
-  let { data: capitulos, error } = await supabase
+  let { data: ultimos, error } = await supabase
     .from("chapters")
     .select("*")
     .order("id", { ascending: false })
@@ -15,41 +15,33 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   if (error) {
     console.error("Erro ao carregar capítulos:", error);
-    return;
-  }
-
-  if (capitulos.length === 0) {
-    conteudo.innerHTML = "<p>Nenhum capítulo publicado ainda.</p>";
+  } else if (ultimos.length === 0) {
+    conteudo.innerHTML = "<p>Nenhum capítulo ainda!</p>";
   } else {
-    capitulos.forEach(cap => {
+    ultimos.forEach((cap) => {
       let div = document.createElement("div");
       div.classList.add("capitulo");
-      div.innerHTML = `<h3>${cap.title} (${cap.tipo})</h3><p>${cap.content}</p>`;
+      div.innerHTML = `<h3>${cap.title} (${cap.tipo})</h3><p>${cap.content}</p><small>Likes: ${cap.likes || 0}</small>`;
       conteudo.appendChild(div);
     });
   }
 
-  // 2) Carregar ranking de likes
-  let { data: top, error: rankError } = await supabase
+  // 2) Carregar ranking (mais curtidos)
+  let { data: top, error: rankErr } = await supabase
     .from("chapters")
     .select("title, likes")
     .order("likes", { ascending: false })
     .limit(5);
 
-  if (rankError) {
-    console.error("Erro ao carregar ranking:", rankError);
-    return;
-  }
-
-  if (ranking) {
-    if (top.length === 0) {
-      ranking.innerHTML = "<p>Nenhum capítulo curtido ainda.</p>";
-    } else {
-      top.forEach(item => {
-        let div = document.createElement("div");
-        div.innerHTML = `<strong>${item.title}</strong> - Likes: ${item.likes || 0}`;
-        ranking.appendChild(div);
-      });
-    }
+  if (rankErr) {
+    console.error("Erro ao carregar ranking:", rankErr);
+  } else if (top.length === 0) {
+    rankingDiv.innerHTML = "<p>Ninguém curtiu nada ainda.</p>";
+  } else {
+    top.forEach((item) => {
+      let div = document.createElement("div");
+      div.innerHTML = `<strong>${item.title}</strong> - Likes: ${item.likes}`;
+      rankingDiv.appendChild(div);
+    });
   }
 });

@@ -2,16 +2,29 @@ const SUPABASE_URL = "https://xjbhlpravirbhmvoornj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqYmhscHJhdmlyYmhtdm9vcm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4MDIxOTcsImV4cCI6MjA1NjM3ODE5N30.MJI87j7DNXymETt-wh_mpEEhW1LVtHC6G4-hsoaHa5w";
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/**
- * UPLOAD DE PDF NO SUPABASE STORAGE
- * Supabase → Storage → Criar Bucket "prologos" (público ou protegido)
- * Retorna a URL do PDF salvo
- */
-async function uploadPDF(file) {
-  const fileName = `${Date.now()}_${file.name}`;
-  let { data, error } = await supabase.storage
-    .from("prologos") // bucket name
-    .upload(fileName, file, {
+/** Verifica se existe algum user. Se não houver, o primeiro cadastro vira admin. */
+async function isFirstUser() {
+  let { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .limit(1);
+
+  if (error) {
+    console.error("Erro ao checar usuários:", error);
+    return false;
+  }
+
+  // Se length=0 => não existe user => primeiro
+  return data.length === 0;
+}
+
+/** Upload de PDF no Storage (bucket "prologos") */
+async function uploadPDF(pdfFile) {
+  const fileName = `prologos/${Date.now()}_${pdfFile.name}`;
+
+  let { error } = await supabase.storage
+    .from("prologos")
+    .upload(fileName, pdfFile, {
       contentType: "application/pdf"
     });
 
@@ -20,7 +33,7 @@ async function uploadPDF(file) {
     return null;
   }
 
-  // Gerar URL pública do PDF (se o bucket for público)
+  // Gerar URL pública (assumindo que o bucket é público)
   const { publicURL } = supabase.storage
     .from("prologos")
     .getPublicUrl(fileName);
@@ -28,41 +41,48 @@ async function uploadPDF(file) {
   return publicURL;
 }
 
-/**
- * CADASTRO DE USUÁRIO (Autor ou Leitor)
- * - Se for autor → status = 'pendente' e faz upload do PDF prólogo
- */
+/** CADASTRAR */
 async function cadastrar() {
   const username = document.getElementById("newUser").value;
   const email = document.getElementById("newEmail").value;
   const password = document.getElementById("newPass").value;
-  const role = document.getElementById("userRole").value;
+  let role = document.getElementById("userRole").value;
   const fileInput = document.getElementById("prologoPDF");
-  let pdfURL = "";
 
   if (!username || !email || !password) {
-    alert("Preencha todos os campos!");
+    alert("Preencha todos os campos obrigatórios!");
     return;
   }
 
-  // Se for autor, obrigar upload de PDF
-  if (role === "autor") {
-    if (!fileInput.files[0]) {
-      alert("Envie o arquivo PDF do prólogo.");
-      return;
-    }
-    // Faz upload do PDF para o Supabase Storage
-    pdfURL = await uploadPDF(fileInput.files[0]);
-    if (!pdfURL) {
-      alert("Erro ao enviar o PDF. Tente novamente.");
-      return;
-    }
+  // Se for o primeiro user, forçar admin
+  const first = await isFirstUser();
+  if (first) {
+    role = "admin";
+    alert("Nenhum usuário no banco. Você será ADMIN!");
   }
 
-  // Autores ficam pendentes até o admin aprovar
-  let status = role === "autor" ? "pendente" : "aprovado";
+  // Se autor => status=pendente, senão=aprovado
+  let status = "aprovado";
+  if (role === "autor") {
+    status = "pendente";
+  }
 
-  // Insere o usuário no BD
+  // Upload do PDF se for autor
+  let pdfURL = "";
+  if (role === "autor") {
+    if (!fileInput.files[0]) {
+      alert("Envie um PDF do prólogo!");
+      return;
+    }
+    let uploaded = await uploadPDF(fileInput.files[0]);
+    if (!uploaded) {
+      alert("Falha ao enviar PDF!");
+      return;
+    }
+    pdfURL = uploaded;
+  }
+
+  // Insere no Supabase (senha sem criptografia!)
   let { error } = await supabase.from("users").insert([
     {
       username,
@@ -70,83 +90,80 @@ async function cadastrar() {
       password,
       role,
       status,
-      prologo: pdfURL // link do PDF salvo
+      prologo: pdfURL
     }
   ]);
 
   if (error) {
     alert("Erro ao cadastrar: " + error.message);
   } else {
-    alert("Cadastro realizado! Se você for autor, aguarde aprovação do admin.");
+    alert("Cadastro realizado!");
     window.location.href = "login.html";
   }
 }
 
-/**
- * LOGIN COM USERNAME OU EMAIL
- * - Precisamos buscar no BD usando OR (Supabase: .or('username.eq.xyz,email.eq=xyz')
- * - Comparação de senhas é didática (pois no BD está crypt). Em produção seria no backend.
- */
+/** LOGIN - Username ou Email */
 async function login() {
-  const input = document.getElementById("email").value;
+  const userInput = document.getElementById("email").value; // username ou email
   const password = document.getElementById("password").value;
 
-  if (!input || !password) {
+  if (!userInput || !password) {
     alert("Preencha todos os campos!");
     return;
   }
 
-  // Tentar buscar por username = input
-  let { data: userByUsername, error: errUser } = await supabase
+  // Tenta buscar por username
+  let { data: userByUser, error } = await supabase
     .from("users")
     .select("*")
-    .eq("username", input)
+    .eq("username", userInput)
     .maybeSingle();
 
-  // Se não achou, tenta buscar por email = input
-  if (!userByUsername && !errUser) {
-    let { data: userByEmail, error: errEmail } = await supabase
+  // Se não achou => tenta email
+  if (!userByUser && !error) {
+    let { data: userByEmail, error: err2 } = await supabase
       .from("users")
       .select("*")
-      .eq("email", input)
+      .eq("email", userInput)
       .maybeSingle();
 
-    userByUsername = userByEmail; // userByUsername vira userByEmail
-    errUser = errEmail;           // idem
+    userByUser = userByEmail;
+    error = err2;
   }
 
-  if (errUser || !userByUsername) {
-    alert("Usuário não encontrado ou erro ao buscar no banco!");
+  if (error) {
+    alert("Erro ao buscar usuário: " + error.message);
+    return;
+  }
+  if (!userByUser) {
+    alert("Usuário não encontrado!");
     return;
   }
 
-  // Comparação de senha didática (sem real bcrypt)
-  if (userByUsername.password !== password) {
+  // Comparação de senha (texto puro)
+  if (userByUser.password !== password) {
     alert("Senha incorreta!");
     return;
   }
 
-  // Salva no localStorage
-  localStorage.setItem("user", JSON.stringify(userByUsername));
+  // Salva user no localStorage
+  localStorage.setItem("user", JSON.stringify(userByUser));
 
   // Redireciona
-  if (userByUsername.role === "admin") {
-    window.location.href = "admin.html";
-  } else if (userByUsername.role === "autor") {
-    // Autor também pode postar
+  if (userByUser.role === "admin" || userByUser.role === "autor") {
     window.location.href = "admin.html";
   } else {
     window.location.href = "index.html";
   }
 }
 
-/** DESLOGAR */
+/** LOGOUT */
 function logout() {
   localStorage.removeItem("user");
   window.location.href = "login.html";
 }
 
-/** Eventos para botoes */
+/** Listeners */
 document.addEventListener("DOMContentLoaded", function () {
   const registerButton = document.getElementById("registerButton");
   if (registerButton) {
