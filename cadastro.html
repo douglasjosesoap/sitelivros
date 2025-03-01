@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Cadastro</h2>
+        <input type="text" id="newUser" placeholder="Usuário">
+        <input type="email" id="newEmail" placeholder="Email">
+        <input type="password" id="newPass" placeholder="Senha">
+        <select id="userRole">
+            <option value="leitor">Leitor</option>
+            <option value="autor">Autor</option>
+        </select>
+        <textarea id="prologo" placeholder="Prólogo do projeto (somente para autores)"></textarea>
+        <button onclick="cadastrar()">Cadastrar</button>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>
